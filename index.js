@@ -8,11 +8,6 @@ const pushKeys = require('./push-keys');
 
 const port = process.env.PORT || 3000;
 
-const vapidKeys = {
-  publicKey: pushKeys.publicKey,
-  privateKey: pushKeys.privateKey
-};
-
 app.use(express.static('public'));
 
 app.use(bodyParser.json());
@@ -24,11 +19,11 @@ app.get('/', function(req, res){
   res.sendFile('default.html', { root: __dirname + "/" } );
 });
 
-webpush.setGCMAPIKey(vapidKeys.GCMAPIKey);
+webpush.setGCMAPIKey(pushKeys.GCMAPIKey);
 webpush.setVapidDetails(
-  vapidKeys.subject,
-  vapidKeys.publicKey,
-  vapidKeys.privateKey
+  pushKeys.subject,
+  pushKeys.publicKey,
+  pushKeys.privateKey
 );
 
 app.post('/api/save-subscription/', function (req, res) {
@@ -77,7 +72,7 @@ function getCryptoData(coin) {
     var payload = {};
 
     coin.price = response.body[0].price_usd;
-    coin.percentChange24h = response.body[0].percentChange24h;
+    coin.percentChange24h = response.body[0].percent_change_24h;
 
     if(percentChange1h >= 10) {
       coin.count = 12;
@@ -99,7 +94,7 @@ function getCryptoData(coin) {
       coin.message = ONE_DAY_EXPLODIFIED;
       coin.notificationRank = 2;
       payload.title =  `${name} has explodified! (${percentChange24h}% in 24 hrs)`;
-    } else if(percentChange24h >= 20 && coin.notificationRank < 1) {
+    } else if(percentChange24h >= 5 && coin.notificationRank < 1) {
       coin.count = 12;
       coin.message = ONE_DAY_GOING_UP;
       coin.notificationRank = 1;
@@ -125,6 +120,8 @@ const ONE_HOUR_EXPLODIFIED = '1hrExpolidified';
 const ONE_DAY_TO_THE_MOON = '1DayToTheMoon';
 const ONE_DAY_EXPLODIFIED = '1DayExplodified';
 const ONE_DAY_GOING_UP = '1DayGoingUp';
+
+let savedSubscription;
 
 let coins = [
   {
@@ -169,15 +166,16 @@ let coins = [
   }
 ];
 
-// setInterval(function() {
-//   // var coins = ['bitcoin', 'bitcoin-cash', 'ripple', 'litecoin', 'dash', 'neo', 'iota', 'monero',
-//   // 'ethereum', 'lisk', 'waves', 'golem-network-tokens', 'verge', 'pivx', 'basic-attention-token', 'district0x'];
-//   // var coins = ['bitcoin'];
-//   coins.forEach((coin) => {
-//     getCryptoData(coin).then((payload) => {
-//       if(payload) {
-//         webpush.sendNotification(savedSubscription, JSON.stringify(payload));
-//       }
-//     });
-//   });
-// }, 5000);
+setInterval(function() {
+  if(!savedSubscription) {
+    return;
+  }
+
+  coins.forEach((coin) => {
+    getCryptoData(coin).then((payload) => {
+      if(payload) {
+        webpush.sendNotification(savedSubscription, JSON.stringify(payload));
+      }
+    });
+  });
+}, 5000);

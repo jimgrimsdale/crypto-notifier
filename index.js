@@ -53,7 +53,7 @@ app.post('/api/save-subscription/', function (req, res) {
   return 'subscription saved';
 });
 
-app.get('/api/get-coins', function (req, res) {
+app.post('/api/get-coins', function (req, res) {
   res.setHeader('Content-Type', 'application/json');
   res.send(JSON.stringify(coins));
 });

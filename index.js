@@ -6,13 +6,11 @@ const bodyParser = require('body-parser');
 const got = require('got');
 const pushKeys = require('./push-keys');
 
-const port = process.env.PORT || 3000;
-
 app.use(express.static('public'));
 
 app.use(bodyParser.json());
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'));
+app.listen(process.env.PORT || 3000, () => console.log('Example app listening on port 3000!'));
 
 
 app.get('/', function(req, res){

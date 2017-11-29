@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+	<div class="coins"></div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script>
+		/*jshint esversion: 6 */
+		if ('serviceWorker' in navigator) {
+			window.addEventListener('load', function() {
+				navigator.serviceWorker.register('sw1.js').then(function(registration) {
+					// Registration was successful
+					console.log('Registered!');
+					askPermission();
+
+					const subscribeOptions = {
+			      userVisibleOnly: true,
+			      applicationServerKey: urlBase64ToUint8Array(
+			        "BCcrFEof9QDSQGO77EIr_83PAZiA2KMMlOmQfs66ibTlUm7rlZPjul2G5DCzpjtGt8ojNJlrPm2_EBlxy9CAwjE"
+			      )
+			    };
+
+			    return registration.pushManager.subscribe(subscribeOptions);
+				}, function(err) {
+					// registration failed :(
+					console.log('ServiceWorker registration failed: ', err);
+				}).then(function(pushSubscription) {
+			    console.log('Received PushSubscription: ', JSON.stringify(pushSubscription));
+			    sendSubscriptionToBackEnd(pushSubscription);
+			    return pushSubscription;
+				}).catch(function(err) {
+					console.log(err);
+				});
+			});
+		} else {
+		 console.log('service worker is not supported');
+		}
+
+		function askPermission() {
+		  return new Promise(function(resolve, reject) {
+		    const permissionResult = Notification.requestPermission(function(result) {
+		      resolve(result);
+		    });
+
+		    if (permissionResult) {
+		      permissionResult.then(resolve, reject);
+		    }
+		  })
+		  .then(function(permissionResult) {
+		    if (permissionResult !== 'granted') {
+		      throw new Error('We weren\'t granted permission.');
+		    } else {
+		    	console.log('permission granted');
+		    }
+		  });
+		}
+
+		function sendSubscriptionToBackEnd(subscription) {
+		  return fetch('/api/save-subscription/', {
+		    method: 'POST',
+		    headers: {
+		      'Content-Type': 'application/json'
+		    },
+		    body: JSON.stringify(subscription)
+		  })
+		  .then(function(response) {
+		    if (!response.ok) {
+		      throw new Error('Bad status code from server.');
+		    }
+
+		    return response.json();
+		  })
+		  .then(function(responseData) {
+		    if (!(responseData.data && responseData.data.success)) {
+		      throw new Error('Bad response from server.');
+		    }
+		  });
+		}
+
+		function urlBase64ToUint8Array(base64String) {
+		  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+		  const base64 = (base64String + padding)
+		    .replace(/\-/g, '+')
+		    .replace(/_/g, '/');
+
+		  const rawData = window.atob(base64);
+		  const outputArray = new Uint8Array(rawData.length);
+
+		  for (let i = 0; i < rawData.length; ++i) {
+		    outputArray[i] = rawData.charCodeAt(i);
+		  }
+		  return outputArray;
+		}
+
+		$(function() {
+			fetch('/api/get-coins/', {
+		    method: 'GET',
+		    headers: {
+		      'Content-Type': 'application/json'
+		    }
+		  })
+		  .then(function(response) {
+		  	response.json().then(function(data) {
+		  		data.forEach(function(coin) {
+		  			$('.coins').append(`<p>${coin.name}: ${coin.price} (${coin.percentChange24h})</p>`);
+		  		});
+		  	});
+		  });
+		});
+	</script>
+</body>
+</html>
